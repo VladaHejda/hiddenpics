@@ -103,13 +103,15 @@ $verticalMaxCount = findMaxCount($verticalNumbers);
 <style>
 	table {
 		border-collapse: collapse;
+		width: 100%;
+		height: 100%;
 	}
 	td {
 		border-style: solid;
 		border-color: black;
 		border-width: 1px;
-		width: 17px;
-		height: 20px;
+		min-width: 17px;
+		min-height: 20px;
 		text-align: center;
 	}
 	.numbers-horizontal {
