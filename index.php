@@ -94,6 +94,10 @@ $verticalMaxCount = findMaxCount($verticalNumbers);
 			return true;
 		});
 	});
+
+	window.onerror = function (m) {
+		alert(m);
+	};
 </script>
 
 <style>
