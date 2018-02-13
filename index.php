@@ -4,11 +4,11 @@ $filename = '001.png';
 
 function calculateNumbers($filename, $reverse = false)
 {
-	[$maxX, $maxY] = getimagesize($filename);
+	list ($maxX, $maxY) = getimagesize($filename);
 	$resource = imagecreatefrompng($filename);
 
 	if ($reverse) {
-		[$maxX, $maxY] = [$maxY, $maxX];
+		list ($maxX, $maxY) = [$maxY, $maxX];
 	}
 
 	$numbers = [];
