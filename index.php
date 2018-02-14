@@ -48,6 +48,8 @@ function calculateNumbers($filename, $reverse = false)
 $horizontalNumbers = calculateNumbers($filename);
 $verticalNumbers = calculateNumbers($filename, true);
 
+$numbersCount = count($horizontalNumbers) * count($verticalNumbers);
+
 function findMaxCount(array $numbers)
 {
 	$max = 0;
@@ -66,23 +68,92 @@ $verticalMaxCount = findMaxCount($verticalNumbers);
 
 <script>
 	$(function () {
+		var state = {};
+		var numbersCount = <?php echo $numbersCount; ?>;
+
+		var STATES = {
+			UNTOUCHED: 0,
+			EMPTY: 1,
+			FULL: 2
+		};
+
+		var locked = false;
+		var lock = function () {
+			locked = true;
+			setTimeout(function () {
+				locked = false;
+				if (onUnlocked !== null) {
+					onUnlocked();
+				}
+			}, 4000);
+		};
+		var onUnlocked = null;
+		var saveStateAndLock = function () {
+			lock();
+			onUnlocked = null;
+			saveState();
+		};
+
+		var saveStatePostponed = function () {
+			if (locked) {
+				onUnlocked = saveStateAndLock;
+			} else {
+				saveStateAndLock();
+			}
+		};
+
+		var getCellId = function ($cell) {
+			return parseInt($cell.prop('id').substr(5), 10);
+		};
+
+		var setCellState = function ($cell, id, cellState) {
+			if (cellState === STATES.FULL) {
+				$cell.removeClass('empty').addClass('full');
+			} else if (cellState === STATES.EMPTY) {
+				$cell.removeClass('full').addClass('empty');
+			} else {
+				$cell.removeClass('full empty');
+			}
+
+			state[id] = cellState;
+		};
+
+		var setCellStateById = function (id, cellState) {
+			setCellState($('#cell-' + id), id, cellState);
+		};
+
 		$('.colourable').on('click', function () {
 			var $cell = $(this);
-			if ($cell.hasClass('full')) {
-				$cell.removeClass('full').addClass('empty');
-			} else if ($cell.hasClass('empty')) {
-				$cell.removeClass('empty');
+			var id = getCellId($cell);
+
+			var cellState;
+			if (state[id] === STATES.FULL) {
+				cellState = STATES.EMPTY;
+			} else if (state[id] === STATES.EMPTY) {
+				cellState = STATES.UNTOUCHED;
 			} else {
-				$cell.addClass('full');
+				cellState = STATES.FULL;
 			}
+
+			setCellState($cell, id, cellState);
+			saveStatePostponed();
+
 		}).on('contextmenu', function (event) {
 			event.preventDefault();
 			var $cell = $(this);
-			if ($cell.hasClass('full')) {
-				$cell.removeClass('full');
+			var id = getCellId($cell);
+
+			var cellState;
+			if (state[id] === STATES.FULL) {
+				cellState = STATES.UNTOUCHED;
+			} else if (state[id] === STATES.EMPTY) {
+				cellState = STATES.UNTOUCHED;
 			} else {
-				$cell.toggleClass('empty');
+				cellState = STATES.EMPTY;
 			}
+
+			setCellState($cell, id, cellState);
+			saveStatePostponed();
 		});
 
 		$('.number').on('click', function () {
@@ -90,9 +161,50 @@ $verticalMaxCount = findMaxCount($verticalNumbers);
 			$cell.toggleClass('completed');
 		});
 
-		$(window).on('beforeunload', function (event) {
-			return true;
-		});
+		var stateCookieName = 'state';
+
+		var saveState = function () {
+			var date = new Date();
+			date.setTime(date.getTime() + (300 * 24 * 60 * 60 * 1000));
+
+			var value = '';
+			for (var id = 0; id < numbersCount; id++) {
+				value += state[id].toString();
+			}
+
+			document.cookie = stateCookieName + '=' + value + '; expires=' + date.toUTCString() + '; path=/';
+		};
+
+		var loadState = function () {
+			var cookies = document.cookie.split(';');
+
+			var value = null;
+			for(var i = 0; i < cookies.length; i++) {
+				var cookie = cookies[i];
+				while (cookie.charAt(0) === ' ') {
+					cookie = cookie.substring(1, cookie.length);
+				}
+				if (cookie.indexOf(stateCookieName + '=') === 0) {
+					value = cookie.substring(stateCookieName.length + 1, cookie.length);
+					break;
+				}
+			}
+
+			for (var id = 0; id < numbersCount; id++) {
+				var cellState = STATES.UNTOUCHED;
+				if (value !== null) {
+					cellState = value.charAt(id);
+					cellState = parseInt(cellState, 10);
+
+					if (isNaN(cellState) || (cellState !== STATES.FULL && cellState !== STATES.EMPTY)) {
+						cellState = STATES.UNTOUCHED;
+					}
+				}
+				setCellStateById(id, cellState);
+			}
+		};
+
+		loadState();
 	});
 
 	window.onerror = function (m) {
@@ -176,6 +288,7 @@ for ($y = 0; $y < $verticalMaxCount; $y++) {
 }
 
 
+$counter = 0;
 foreach (array_keys($horizontalNumbers) as $y) {
 	if ($y % 5 === 0) {
 		echo '<tr class="highlight-row">';
@@ -200,12 +313,14 @@ foreach (array_keys($horizontalNumbers) as $y) {
 	}
 
 	foreach (array_keys($verticalNumbers) as $x) {
+		$classes = ['colourable'];
 		if ($x % 5 === 0) {
-			echo '<td class="colourable highlight-column">';
-		} else {
-			echo '<td class="colourable">';
+			$classes[] = 'highlight-column';
 		}
+		echo '<td id="cell-' . $counter . '" class="' . implode(' ', $classes) . '">';
+
 		echo '</td>';
+		$counter++;
 	}
 	echo '</tr>';
 }
