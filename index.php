@@ -1,6 +1,24 @@
 <?php
 
-$filename = '001.png';
+$pics = [
+	'' => '001.png',
+	'002' => '002.png',
+];
+
+$name = null;
+if (array_key_exists('i', $_GET)) {
+	$name = $_GET['i'];
+	if (array_key_exists($name, $pics)) {
+		$filename = $pics[$name];
+	} else {
+		$name = null;
+	}
+}
+
+if ($name === null) {
+	$name = '';
+	$filename = $pics[$name];
+}
 
 function calculateNumbers($filename, $reverse = false)
 {
@@ -161,7 +179,7 @@ $verticalMaxCount = findMaxCount($verticalNumbers);
 			$cell.toggleClass('completed');
 		});
 
-		var stateCookieName = 'state';
+		var stateCookieName = 'state<?php echo $name; ?>';
 
 		var saveState = function () {
 			var date = new Date();
